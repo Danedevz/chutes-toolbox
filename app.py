@@ -19,14 +19,49 @@ def handle_edit(token: str, seed: int | None, width: int, height: int, prompt: s
     }
     return fetch_edit_model(token=token, payload=payload)
 
-captioning = gr.Interface(
-    fn=lambda fn: "None",
-    inputs=[
-        gr.Text("Placeholder")
-    ],
-    outputs=gr.Textbox(visible=False),
-    api_name="predict"
-)
+def handle_template(value):
+    is_custom = value == "Custom"
+    if not is_custom:
+        return gr.update(interactive=is_custom, placeholder="Change template to \"Custom\" to define custom prompts")
+    return gr.update(interactive=is_custom, placeholder="")
+
+
+with gr.Blocks() as demo:
+    gr.Markdown("""
+# Chutes Toolbox
+        
+        """)
+    #Captioning Tab
+    with gr.Tab("Captioning"):
+        gr.Textbox(label="API Token")
+        Template_Dropdown = gr.Dropdown(
+            ["Custom", "Stable Diffusion", "Danbooru"], 
+            value="Custom", 
+            label="Template prompt",
+        )
+        Prompt_Textbox = gr.Textbox(label="Prompt", interactive=True)
+        Template_Dropdown.change(handle_template, inputs=Template_Dropdown, outputs=Prompt_Textbox)
+
+    with gr.Tab("Edit"):
+        api_token_edit = gr.Textbox(label="API token", type="password")
+        seed = gr.Number(label="seed", value=None)
+        width = gr.Number(label="width", value=1024, info="pixels")
+        height = gr.Number(label="height", value=1024, info="pixels")
+        prompt = gr.Textbox(label="prompt")
+        image_input = gr.Image(label="image", type="pil")
+        cfg = gr.Slider(label="true cfg scale", step=1, value=4, maximum=10)
+        steps = gr.Slider(label="steps", step=1, value=40)
+        negative_prompt = gr.Textbox(label="negative prompt")
+        run_btn = gr.Button("Run")
+        result = gr.Image(label="result", type="filepath", interactive=False, format="jpeg")
+        run_btn.click(
+            fn=handle_edit,
+            inputs=[
+                api_token_edit, seed, width, height,
+                prompt, image_input, cfg, steps, negative_prompt,
+            ],
+            outputs=result,
+        )
 
 generation = gr.Interface(
     fn=lambda fn: "None",
@@ -37,24 +72,7 @@ generation = gr.Interface(
     api_name="predict"
 )
 
-image_edit = gr.Interface(
-    fn=handle_edit,
-    inputs=[
-        gr.Textbox(label="API token", type="password"),
-        gr.Number(label="seed", value=None),
-        gr.Number(label="width", value=1024, info="pixels"),
-        gr.Number(label="height", value=1024, info="pixels"),
-        gr.Textbox(label="prompt"),
-        gr.Image(label="image", type="pil"),
-        gr.Slider(label="true cfg scale", step=1, value=4, maximum=10),
-        gr.Slider(label="steps", step=1, value=40),
-        gr.Textbox(label="negative prompt"),
-    ],
-    outputs=gr.Image(label="result", type="filepath", interactive=False, format="jpeg"),
-    api_name="predict",
-)
-
-demo = gr.TabbedInterface([captioning, generation, image_edit], ["Captioning", "Generation", "Edit"])
+#demo = gr.TabbedInterface([captioning, generation, image_edit], ["Captioning", "Generation", "Edit"])
 
 if __name__ == "__main__":
     demo.launch()
